@@ -16,5 +16,5 @@ import axios from 'axios';
 // });
 
 export const getProduct = (url: string) => {
-    return axios.get("http://localhost:3001/api/crawl-detail/product", { params: { url } }).then(res => res.data);
+    return axios.get("https://crawl-server.herokuapp.com/api/crawl-detail/product", { params: { url } }).then(res => res.data);
 };
