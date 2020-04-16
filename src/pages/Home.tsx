@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Form, Input, Button, Tabs, Progress, Table } from 'antd';
+import { Form, Input, Button, Tabs, Progress, Table, Badge, Avatar } from 'antd';
 import { default as validatorLib } from 'validator';
 import { validateListURL } from '../helpers/validators';
 import { getProduct } from '../services/crawler';
@@ -12,15 +12,27 @@ type Product = {
     url: string,
 }
 
+type Tracking = {
+    total: number,
+    success: number,
+}
+
 const Home = () => {
     const [urls, setUrls] = useState<string[]>([]);
+    const [currentTotal, setCurrentTotal] = useState<number>(0);
     const [data, setData] = useState<Product[]>([]);
     const [loading, setLoading] = useState<boolean>(false);
+    const [track, setTrack] = useState<Tracking>({
+        total: 0,
+        success: 0,
+    })
 
     const onLoadProductFromLinks = async (values: any) => {
+        setCurrentTotal(0);
         const { item } = values;
-        const currUrls = item.split(',').map((e: string) => e.trim());
+        const currUrls = item.trim().split(/\r?\n/).map((e: string) => e.trim());
         setLoading(true);
+        setCurrentTotal(currUrls.length);
         setUrls(currUrls);
     };
 
@@ -30,7 +42,25 @@ const Home = () => {
         // await getProducts(item);
     };
 
+    const getPercent = () => {
+        return 100 * (currentTotal - urls.length) / currentTotal;
+    }
+
     const columns = [
+        {
+            title: 'Image',
+            dataIndex: 'images',
+            render: (images: string[]) => {
+                if (images && images.length) {
+                    return (
+                        <Badge count={images.length}>
+                            <Avatar size={64} shape="square" src={images[0]} />
+                        </Badge>
+                    )
+                }
+                return null;
+            },
+        },
         {
             title: 'SKU',
             dataIndex: 'sku',
@@ -56,14 +86,18 @@ const Home = () => {
     useEffect(() => {
         if (urls.length) {
             const curr = urls[0];
+            const newTrack = {...track};
             getProduct(curr)
                 .then(res => {
+                    newTrack.success = newTrack.success + 1;
                     const newData = data.concat(res);
                     setData(newData);
                 })
                 .catch(console.log)
                 .finally(() => {
+                    newTrack.total = newTrack.total + 1;
                     const newUrls = urls.slice(1);
+                    setTrack(newTrack)
                     setUrls(newUrls);
                 })
         } else {
@@ -74,7 +108,7 @@ const Home = () => {
     return (
         <div className="container mt-5">
             <h2 className="text-center">Lấy thông tin sản phẩm</h2>
-            <div className="text-center">Một số web hỗ trợ: HanoiComputer,...</div>
+            <div className="text-center">Website hỗ trợ: HanoiComputer</div>
             <Tabs defaultActiveKey="1">
                 <TabPane tab="Từ link sản phẩm" key="1">
                     <Form className="mt-3" onFinish={onLoadProductFromLinks}>
@@ -88,14 +122,22 @@ const Home = () => {
                             validateTrigger={["onSubmit"]}
                         >
                             <TextArea
-                                rows={2}
-                                placeholder="Nhập link sản phẩm, ngăn cách bởi dấu phẩy, tối đa 5 link"
+                                rows={4}
+                                placeholder="Nhập link sản phẩm, mỗi link một dòng"
                             />
                         </Item>
                         <div className="d-flex justify-content-end">
                             <Button disabled={loading} htmlType="submit" type="primary">Lấy sản phẩm</Button>
                         </div>
                     </Form>
+                    <strong className="d-block">
+                        <span className="text-muted">Total: {track.total}</span>
+                        {' - '}
+                        <span className="text-success">Success: {track.success}</span>
+                        {' - '}
+                        <span className="text-danger">Error: {track.total - track.success}</span>
+                    </strong>
+                    <Progress percent={currentTotal !== 0 ? getPercent() : 0} status={loading ? 'active' : undefined} />
                     {data.length ? (
                         <Table
                             pagination={{
