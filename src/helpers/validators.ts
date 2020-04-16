@@ -5,7 +5,7 @@ export const validateListURL = (_: any, value: string) => {
         if (value.includes(' ')) {
             return Promise.reject('Không được chứa khoảng trắng');
         }
-        const arrLink = value.split(',');
+        const arrLink = value.trim().split(/\r?\n/);
         let errLink: string[] = [];
         arrLink.map((item: string) => {
             if (!validator.isURL(item)) {
